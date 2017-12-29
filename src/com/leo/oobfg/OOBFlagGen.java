@@ -36,7 +36,6 @@ public class OOBFlagGen implements ActionListener {
 	private JTextArea txtOutput;
 	private JButton btnGenerate;
 	private JButton btnCopyToClipboard;
-	private JLabel lblValueSize;
 	private final ButtonGroup btnGSize = new ButtonGroup();
 	private JRadioButton rdbtnByte;
 	private JRadioButton rdbtnWord;
@@ -144,7 +143,7 @@ public class OOBFlagGen implements ActionListener {
 		btnCopyToClipboard.setBounds(10, 251, 327, 23);
 		frame.getContentPane().add(btnCopyToClipboard);
 
-		lblValueSize = new JLabel("Value size:");
+		JLabel lblValueSize = new JLabel("Value size:");
 		lblValueSize.setBounds(171, 11, 64, 14);
 		frame.getContentPane().add(lblValueSize);
 
