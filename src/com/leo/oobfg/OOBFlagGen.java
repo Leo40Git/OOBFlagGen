@@ -1,5 +1,8 @@
 package com.leo.oobfg;
 
+import java.awt.BorderLayout;
+import java.awt.Desktop;
+import java.awt.Dimension;
 import java.awt.EventQueue;
 import java.awt.GraphicsEnvironment;
 import java.awt.Toolkit;
@@ -7,7 +10,17 @@ import java.awt.datatransfer.Clipboard;
 import java.awt.datatransfer.StringSelection;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.io.BufferedReader;
 import java.io.File;
+import java.io.FileOutputStream;
+import java.io.FileReader;
+import java.io.IOException;
+import java.io.InputStream;
+import java.net.URI;
+import java.net.URISyntaxException;
+import java.net.URL;
+import java.nio.channels.Channels;
+import java.nio.channels.ReadableByteChannel;
 import java.text.ParseException;
 
 import javax.swing.ButtonGroup;
@@ -16,18 +29,27 @@ import javax.swing.JFormattedTextField;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JOptionPane;
+import javax.swing.JPanel;
 import javax.swing.JRadioButton;
+import javax.swing.JScrollPane;
 import javax.swing.JTextArea;
+import javax.swing.SwingUtilities;
 import javax.swing.UIManager;
 import javax.swing.UnsupportedLookAndFeelException;
 import javax.swing.text.MaskFormatter;
 
 public class OOBFlagGen implements ActionListener {
+	
+	public static final Version VERSION = new Version("1.0");
+	public static final String UPDATE_CHECK_SITE = "https://raw.githubusercontent.com/Leo40Git/OOBFlagGen/master/.version";
+	public static final String DOWNLOAD_SITE = "https://github.com/Leo40Git/OOBFlagGen/releases/";
 
 	public static final String A_GENERATE = "generate";
 	public static final String A_COPY = "copy";
 	public static final String A_SIZE_BYTE = "size.byte";
 	public static final String A_SIZE_WORD = "size.word";
+	public static final String A_SIZE_DWORD = "size.dword";
+	public static final String A_UPDATE = "update";
 
 	private JFrame frame;
 	private JFormattedTextField fldAddress;
@@ -35,10 +57,12 @@ public class OOBFlagGen implements ActionListener {
 	private MaskFormatter mfValue;
 	private JTextArea txtOutput;
 	private JButton btnGenerate;
-	private JButton btnCopyToClipboard;
+	private JButton btnCopy;
 	private final ButtonGroup btnGSize = new ButtonGroup();
 	private JRadioButton rdbtnByte;
 	private JRadioButton rdbtnWord;
+	private JRadioButton rdbtnDword;
+	private JButton btnUpdate;
 
 	/**
 	 * Launch the application.
@@ -62,11 +86,31 @@ public class OOBFlagGen implements ActionListener {
 						"Could not set Look & Feel", JOptionPane.ERROR_MESSAGE);
 				System.exit(1);
 			}
+		Config.init();
+		final String skipuc = "skipuc";
+		boolean skipucF = new File(System.getProperty("user.dir") + "/" + skipuc).exists();
+		boolean skipucR = Config.getBoolean(Config.KEY_SKIP_UPDATE_CHECK, false);
+		if (skipucR) {
+			Config.setBoolean(Config.KEY_SKIP_UPDATE_CHECK, false);
+			skipucF = skipucR;
+		}
+		LoadFrame loadFrame;
+		if (skipucF) {
+			System.out.println("Update check: skip file detected, skipping");
+			loadFrame = new LoadFrame();
+		} else {
+			loadFrame = updateCheck(false, false);
+		}
+		EventQueue.invokeLater(() -> {
+			loadFrame.setLoadString("Loading...");
+			loadFrame.repaint();
+		});
 		EventQueue.invokeLater(new Runnable() {
 			public void run() {
 				try {
 					OOBFlagGen window = new OOBFlagGen();
 					window.frame.setVisible(true);
+					loadFrame.dispose();
 				} catch (Exception e) {
 					e.printStackTrace();
 				}
@@ -86,27 +130,28 @@ public class OOBFlagGen implements ActionListener {
 	 */
 	private void initialize() {
 		frame = new JFrame();
+		frame.setIconImage(Toolkit.getDefaultToolkit().getImage(OOBFlagGen.class.getResource("/com/leo/oobfg/icon.png")));
 		frame.setResizable(false);
-		frame.setTitle("OOB Flag Generator");
-		frame.setBounds(100, 100, 353, 313);
+		frame.setTitle("OOB Flag Generator v" + VERSION);
+		frame.setBounds(100, 100, 353, 334);
 		frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 		frame.setLocationRelativeTo(null);
 		frame.getContentPane().setLayout(null);
 
 		JLabel lblAddress = new JLabel("Address:");
-		lblAddress.setBounds(10, 11, 64, 14);
+		lblAddress.setBounds(10, 11, 83, 14);
 		frame.getContentPane().add(lblAddress);
 
 		MaskFormatter mfAddress = null;
 		try {
-			mfAddress = new MaskFormatter("004HHHHH");
+			mfAddress = new MaskFormatter("00HHHHHH");
 		} catch (ParseException e) {
 			e.printStackTrace();
 			System.exit(1);
 		}
 		mfAddress.setPlaceholderCharacter('0');
 		fldAddress = new JFormattedTextField(mfAddress);
-		fldAddress.setBounds(78, 8, 83, 20);
+		fldAddress.setBounds(103, 8, 58, 20);
 		frame.getContentPane().add(fldAddress);
 
 		JLabel lblValue = new JLabel("Value (in hex):");
@@ -114,40 +159,40 @@ public class OOBFlagGen implements ActionListener {
 		frame.getContentPane().add(lblValue);
 
 		try {
-			mfValue = new MaskFormatter("00HH");
+			mfValue = new MaskFormatter("000000HH");
 		} catch (ParseException e) {
 			e.printStackTrace();
 			System.exit(1);
 		}
 		mfValue.setPlaceholderCharacter('0');
 		fldValue = new JFormattedTextField(mfValue);
-		fldValue.setBounds(103, 36, 40, 20);
+		fldValue.setBounds(103, 36, 58, 20);
 		frame.getContentPane().add(fldValue);
 
 		btnGenerate = new JButton("Generate!");
 		btnGenerate.setActionCommand(A_GENERATE);
 		btnGenerate.addActionListener(this);
-		btnGenerate.setBounds(10, 64, 327, 23);
+		btnGenerate.setBounds(10, 91, 327, 23);
 		frame.getContentPane().add(btnGenerate);
 
 		txtOutput = new JTextArea();
 		txtOutput.setWrapStyleWord(true);
 		txtOutput.setLineWrap(true);
 		txtOutput.setEditable(false);
-		txtOutput.setBounds(10, 98, 327, 142);
+		txtOutput.setBounds(10, 125, 327, 142);
 		frame.getContentPane().add(txtOutput);
 
-		btnCopyToClipboard = new JButton("Copy to Clipboard");
-		btnCopyToClipboard.setActionCommand(A_COPY);
-		btnCopyToClipboard.addActionListener(this);
-		btnCopyToClipboard.setBounds(10, 251, 327, 23);
-		frame.getContentPane().add(btnCopyToClipboard);
+		btnCopy = new JButton("Copy to Clipboard");
+		btnCopy.setActionCommand(A_COPY);
+		btnCopy.addActionListener(this);
+		btnCopy.setBounds(10, 278, 327, 23);
+		frame.getContentPane().add(btnCopy);
 
 		JLabel lblValueSize = new JLabel("Value size:");
 		lblValueSize.setBounds(171, 11, 64, 14);
 		frame.getContentPane().add(lblValueSize);
 
-		rdbtnByte = new JRadioButton("Byte");
+		rdbtnByte = new JRadioButton("BYTE");
 		btnGSize.add(rdbtnByte);
 		rdbtnByte.setActionCommand(A_SIZE_BYTE);
 		rdbtnByte.addActionListener(this);
@@ -155,12 +200,25 @@ public class OOBFlagGen implements ActionListener {
 		rdbtnByte.setBounds(241, 7, 83, 23);
 		frame.getContentPane().add(rdbtnByte);
 
-		rdbtnWord = new JRadioButton("Word");
+		rdbtnWord = new JRadioButton("WORD");
 		btnGSize.add(rdbtnWord);
 		rdbtnWord.setActionCommand(A_SIZE_WORD);
 		rdbtnWord.addActionListener(this);
 		rdbtnWord.setBounds(241, 35, 83, 23);
 		frame.getContentPane().add(rdbtnWord);
+		
+		rdbtnDword = new JRadioButton("DWORD");
+		btnGSize.add(rdbtnDword);
+		rdbtnDword.setActionCommand(A_SIZE_DWORD);
+		rdbtnDword.addActionListener(this);
+		rdbtnDword.setBounds(241, 61, 109, 23);
+		frame.getContentPane().add(rdbtnDword);
+		
+		btnUpdate = new JButton("Check for Updates");
+		btnUpdate.setActionCommand(A_UPDATE);
+		btnUpdate.addActionListener(this);
+		btnUpdate.setBounds(10, 61, 121, 23);
+		frame.getContentPane().add(btnUpdate);
 	}
 
 	@Override
@@ -195,6 +253,8 @@ public class OOBFlagGen implements ActionListener {
 			int size = 8;
 			if (btnGSize.isSelected(rdbtnWord.getModel()))
 				size = 16;
+			else if (btnGSize.isSelected(rdbtnDword.getModel()))
+				size = 32;
 			String[] flagStrs = new String[size];
 			flag *= 8;
 			for (int i = 0; i < flagStrs.length; i++) {
@@ -211,7 +271,6 @@ public class OOBFlagGen implements ActionListener {
 					flagStr = (char) ('0' + flag2) + flagStr;
 				}
 				System.out.println("flagStr=" + flagStr);
-				System.out.println("ascii2Num_CS(flagStr)=" + ascii2Num_CS(flagStr));
 				flagStrs[i] = flagStr;
 				flag++;
 			}
@@ -234,40 +293,140 @@ public class OOBFlagGen implements ActionListener {
 			break;
 		case A_SIZE_BYTE:
 			valueStr = fldValue.getText();
-			if (!valueStr.startsWith("00"))
-				valueStr = "00" + valueStr.substring(2);
+			if (!valueStr.startsWith("000000"))
+				valueStr = "000000" + valueStr.substring(6);
 			fldValue.setText(valueStr);
 			try {
-				mfValue.setMask("00HH");
+				mfValue.setMask("000000HH");
 			} catch (ParseException e1) {
 				e1.printStackTrace();
 				System.exit(1);
 			}
 			break;
 		case A_SIZE_WORD:
+			valueStr = fldValue.getText();
+			if (!valueStr.startsWith("0000"))
+				valueStr = "0000" + valueStr.substring(4);
+			fldValue.setText(valueStr);
 			try {
-				mfValue.setMask("HHHH");
+				mfValue.setMask("0000HHHH");
 			} catch (ParseException e1) {
 				e1.printStackTrace();
 				System.exit(1);
 			}
+			break;
+		case A_SIZE_DWORD:
+			try {
+				mfValue.setMask("HHHHHHHH");
+			} catch (ParseException e1) {
+				e1.printStackTrace();
+				System.exit(1);
+			}
+			break;
+		case A_UPDATE:
+			SwingUtilities.invokeLater(() -> {
+				updateCheck(true, true);
+			});
 			break;
 		default:
 			System.err.println("Unknown action command: " + e.getActionCommand());
 			break;
 		}
 	}
-
-	public static int ascii2Num_CS(String str) {
-		int result = 0;
-		int radix = 1;
-		for (int i = 0; i < str.length(); i++) {
-			if (i > 7)
-				break;
-			if (i > 0)
-				radix *= 10;
-			result += (str.charAt(str.length() - i - 1) - '0') * radix;
+	
+	public static void downloadFile(String url, File dest) throws IOException {
+		URL site = new URL(url);
+		try (InputStream siteIn = site.openStream();
+				ReadableByteChannel rbc = Channels.newChannel(siteIn);
+				FileOutputStream out = new FileOutputStream(dest)) {
+			out.getChannel().transferFrom(rbc, 0, Long.MAX_VALUE);
 		}
-		return result;
+	}
+	
+	public static boolean browseTo(String url) throws URISyntaxException, IOException {
+		URI dlSite = new URI(url);
+		if (Desktop.isDesktopSupported())
+			Desktop.getDesktop().browse(dlSite);
+		else
+			return false;
+		return true;
+	}
+
+	public static LoadFrame updateCheck(boolean disposeOfLoadFrame, boolean showUpToDate) {
+		LoadFrame loadFrame = new LoadFrame();
+		File verFile = new File(System.getProperty("user.dir") + "/temp.version");
+		System.out.println("Update check: starting");
+		try {
+			downloadFile(UPDATE_CHECK_SITE, verFile);
+		} catch (IOException e1) {
+			System.err.println("Update check failed: attempt to download caused exception");
+			e1.printStackTrace();
+			JOptionPane.showMessageDialog(null, "The update check has failed!\nAre you not connected to the internet?",
+					"Update check failed", JOptionPane.ERROR_MESSAGE);
+		}
+		if (verFile.exists()) {
+			System.out.println("Update check: reading version");
+			try (FileReader fr = new FileReader(verFile); BufferedReader reader = new BufferedReader(fr);) {
+				Version check = new Version(reader.readLine());
+				if (VERSION.compareTo(check) < 0) {
+					System.out.println("Update check successful: have update");
+					JPanel panel = new JPanel();
+					panel.setLayout(new BorderLayout());
+					panel.add(new JLabel("A new update is available: " + check), BorderLayout.PAGE_START);
+					final String defaultCl = "No changelog provided.";
+					String cl = defaultCl;
+					while (reader.ready()) {
+						if (defaultCl.equals(cl))
+							cl = reader.readLine();
+						else
+							cl += "\n" + reader.readLine();
+					}
+					JTextArea chglog = new JTextArea(cl);
+					chglog.setEditable(false);
+					chglog.setPreferredSize(new Dimension(800, 450));
+					JScrollPane scrollChglog = new JScrollPane(chglog);
+					panel.add(scrollChglog, BorderLayout.CENTER);
+					panel.add(
+							new JLabel("Click \"Yes\" to go to the download site, click \"No\" to continue to OSTBM."),
+							BorderLayout.PAGE_END);
+					int result = JOptionPane.showConfirmDialog(null, panel, "New update!", JOptionPane.YES_NO_OPTION,
+							JOptionPane.PLAIN_MESSAGE);
+					if (result == JOptionPane.YES_OPTION) {
+						if (!browseTo(DOWNLOAD_SITE))
+							JOptionPane.showMessageDialog(null,
+									"Sadly, we can't browse to the download site for you on this platform. :(\nHead to\n"
+											+ DOWNLOAD_SITE + "\nto get the newest update!",
+									"Operation not supported...", JOptionPane.ERROR_MESSAGE);
+						System.exit(0);
+					}
+				} else {
+					System.out.println("Update check successful: up to date");
+					if (showUpToDate) {
+						JOptionPane.showMessageDialog(null,
+								"You are using the most up to date version of the OneShot Textbox Maker! Have fun!",
+								"Up to date!", JOptionPane.INFORMATION_MESSAGE);
+					}
+				}
+			} catch (IOException e) {
+				System.err.println("Update check failed: attempt to read downloaded file caused exception");
+				e.printStackTrace();
+				JOptionPane.showMessageDialog(null,
+						"The update check has failed!\nAn exception occured while reading update check results:\n" + e,
+						"Update check failed", JOptionPane.ERROR_MESSAGE);
+			} catch (URISyntaxException e1) {
+				System.err.println("Browse to download site failed: bad URI syntax");
+				e1.printStackTrace();
+				JOptionPane.showMessageDialog(null, "Failed to browse to the download site...",
+						"Well, this is awkward.", JOptionPane.ERROR_MESSAGE);
+			} finally {
+				verFile.delete();
+			}
+		} else
+			System.err.println("Update check failed: downloaded file doesn't exist");
+		if (disposeOfLoadFrame) {
+			loadFrame.dispose();
+			return null;
+		}
+		return loadFrame;
 	}
 }
