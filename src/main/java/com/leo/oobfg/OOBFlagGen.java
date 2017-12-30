@@ -27,10 +27,14 @@ import java.util.LinkedList;
 import java.util.List;
 
 import javax.swing.ButtonGroup;
+import javax.swing.ImageIcon;
 import javax.swing.JButton;
 import javax.swing.JFormattedTextField;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
+import javax.swing.JMenu;
+import javax.swing.JMenuBar;
+import javax.swing.JMenuItem;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JRadioButton;
@@ -43,17 +47,21 @@ import javax.swing.text.MaskFormatter;
 
 public class OOBFlagGen implements ActionListener {
 
-	public static List<Image> icons;
+	public static List<Image> appIcons;
 
 	public static void initAppIcons() throws IOException {
-		icons = new LinkedList<>();
+		appIcons = new LinkedList<>();
 		final String[] sizes = new String[] { "16", "32", "64" };
 		for (String size : sizes)
-			icons.add(Toolkit.getDefaultToolkit()
+			appIcons.add(Toolkit.getDefaultToolkit()
 					.getImage(OOBFlagGen.class.getResource("/com/leo/oobfg/icon" + size + ".png")));
 	}
 
-	public static final Version VERSION = new Version("1.0");
+	public static final int APPICON_16 = 0;
+	public static final int APPICON_32 = 1;
+	public static final int APPICON_64 = 2;
+
+	public static final Version VERSION = new Version("1.1");
 	public static final String UPDATE_CHECK_SITE = "https://raw.githubusercontent.com/Leo40Git/OOBFlagGen/master/.version";
 	public static final String DOWNLOAD_SITE = "https://github.com/Leo40Git/OOBFlagGen/releases/";
 	public static final String ISSUES_SITE = "https://github.com/Leo40Git/OOBFlagGen/issues";
@@ -63,6 +71,7 @@ public class OOBFlagGen implements ActionListener {
 	public static final String A_SIZE_BYTE = "size.byte";
 	public static final String A_SIZE_WORD = "size.word";
 	public static final String A_SIZE_DWORD = "size.dword";
+	public static final String A_ABOUT = "about";
 	public static final String A_UPDATE = "update";
 
 	private JFrame frame;
@@ -76,7 +85,8 @@ public class OOBFlagGen implements ActionListener {
 	private JRadioButton rdbtnByte;
 	private JRadioButton rdbtnWord;
 	private JRadioButton rdbtnDword;
-	private JButton btnUpdate;
+	private JMenu mnHelp;
+	private ImageIcon aboutIcon;
 
 	public static void resourceError(Throwable e) {
 		System.err.println("Error while loading resources!");
@@ -158,13 +168,29 @@ public class OOBFlagGen implements ActionListener {
 	 */
 	private void initialize() {
 		frame = new JFrame();
-		frame.setIconImages(icons);
+		frame.setIconImages(appIcons);
 		frame.setResizable(false);
 		frame.setTitle("OOB Flag Generator v" + VERSION);
-		frame.setBounds(100, 100, 353, 334);
+		frame.setBounds(100, 100, 353, 358);
 		frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 		frame.setLocationRelativeTo(null);
 		frame.getContentPane().setLayout(null);
+
+		JMenuBar mb = new JMenuBar();
+		frame.setJMenuBar(mb);
+
+		mnHelp = new JMenu("Help");
+		mb.add(mnHelp);
+
+		JMenuItem mnHelpAbout = new JMenuItem("About OOB Flag Generator");
+		mnHelpAbout.setActionCommand(A_ABOUT);
+		mnHelpAbout.addActionListener(this);
+		mnHelp.add(mnHelpAbout);
+
+		JMenuItem mnHelpUpdate = new JMenuItem("Check for Updates");
+		mnHelpUpdate.setActionCommand(A_UPDATE);
+		mnHelpUpdate.addActionListener(this);
+		mnHelp.add(mnHelpUpdate);
 
 		JLabel lblAddress = new JLabel("Address:");
 		lblAddress.setBounds(10, 11, 83, 14);
@@ -179,6 +205,7 @@ public class OOBFlagGen implements ActionListener {
 		}
 		mfAddress.setPlaceholderCharacter('0');
 		fldAddress = new JFormattedTextField(mfAddress);
+		fldAddress.setToolTipText("Address in memory to edit.");
 		fldAddress.setBounds(103, 8, 58, 20);
 		frame.getContentPane().add(fldAddress);
 
@@ -194,23 +221,30 @@ public class OOBFlagGen implements ActionListener {
 		}
 		mfValue.setPlaceholderCharacter('0');
 		fldValue = new JFormattedTextField(mfValue);
+		fldValue.setToolTipText("Value to set address to.");
 		fldValue.setBounds(103, 36, 58, 20);
 		frame.getContentPane().add(fldValue);
 
 		btnGenerate = new JButton("Generate!");
+		btnGenerate.setToolTipText("Generates the TSC.");
 		btnGenerate.setActionCommand(A_GENERATE);
 		btnGenerate.addActionListener(this);
 		btnGenerate.setBounds(10, 91, 327, 23);
 		frame.getContentPane().add(btnGenerate);
 
+		JScrollPane txtOutputSP = new JScrollPane();
+		txtOutputSP.setBounds(10, 125, 327, 142);
+		frame.getContentPane().add(txtOutputSP);
+
 		txtOutput = new JTextArea();
+		txtOutput.setToolTipText("Generated TSC appears here.");
+		txtOutputSP.setViewportView(txtOutput);
 		txtOutput.setWrapStyleWord(true);
 		txtOutput.setLineWrap(true);
 		txtOutput.setEditable(false);
-		txtOutput.setBounds(10, 125, 327, 142);
-		frame.getContentPane().add(txtOutput);
 
 		btnCopy = new JButton("Copy to Clipboard");
+		btnCopy.setToolTipText("Copies the generated TSC to the clipboard.");
 		btnCopy.setActionCommand(A_COPY);
 		btnCopy.addActionListener(this);
 		btnCopy.setBounds(10, 278, 327, 23);
@@ -221,6 +255,7 @@ public class OOBFlagGen implements ActionListener {
 		frame.getContentPane().add(lblValueSize);
 
 		rdbtnByte = new JRadioButton("BYTE");
+		rdbtnByte.setToolTipText("Sets a BYTE-sized value to an address.");
 		btnGSize.add(rdbtnByte);
 		rdbtnByte.setActionCommand(A_SIZE_BYTE);
 		rdbtnByte.addActionListener(this);
@@ -229,6 +264,7 @@ public class OOBFlagGen implements ActionListener {
 		frame.getContentPane().add(rdbtnByte);
 
 		rdbtnWord = new JRadioButton("WORD");
+		rdbtnWord.setToolTipText("Sets a WORD-sized value to an address.");
 		btnGSize.add(rdbtnWord);
 		rdbtnWord.setActionCommand(A_SIZE_WORD);
 		rdbtnWord.addActionListener(this);
@@ -236,17 +272,12 @@ public class OOBFlagGen implements ActionListener {
 		frame.getContentPane().add(rdbtnWord);
 
 		rdbtnDword = new JRadioButton("DWORD");
+		rdbtnDword.setToolTipText("Sets a DWORD-sized value to an address.");
 		btnGSize.add(rdbtnDword);
 		rdbtnDword.setActionCommand(A_SIZE_DWORD);
 		rdbtnDword.addActionListener(this);
 		rdbtnDword.setBounds(241, 61, 109, 23);
 		frame.getContentPane().add(rdbtnDword);
-
-		btnUpdate = new JButton("Check for Updates");
-		btnUpdate.setActionCommand(A_UPDATE);
-		btnUpdate.addActionListener(this);
-		btnUpdate.setBounds(10, 61, 121, 23);
-		frame.getContentPane().add(btnUpdate);
 	}
 
 	@Override
@@ -257,6 +288,11 @@ public class OOBFlagGen implements ActionListener {
 			System.out.println("Generating!");
 			String strAddress = fldAddress.getText();
 			long flag = Long.parseUnsignedLong(strAddress, 16);
+			if (flag < 0) {
+				JOptionPane.showMessageDialog(null, "Address cannot be negative!", "Could not generate!",
+						JOptionPane.ERROR_MESSAGE);
+				return;
+			}
 			flag -= 0x49DDA0;
 			String distStr = "0x";
 			if (flag < 0)
@@ -289,9 +325,11 @@ public class OOBFlagGen implements ActionListener {
 				System.out.println("Creating string equivalent for flag " + flag);
 				long flag2 = flag;
 				String flagStr = "";
-				if (flag > -1 && flag <= 9999)
+				if (flag > -1 && flag <= 9999) {
 					flagStr = Long.toUnsignedString(flag);
-				else {
+					while (flagStr.length() < 4)
+						flagStr = "0" + flagStr;
+				} else {
 					for (int j = 0; j < 3; j++) {
 						flagStr = (char) ('0' + flag2 % 10) + flagStr;
 						flag2 /= 10;
@@ -350,6 +388,12 @@ public class OOBFlagGen implements ActionListener {
 				e1.printStackTrace();
 				System.exit(1);
 			}
+			break;
+		case A_ABOUT:
+			if (aboutIcon == null)
+				aboutIcon = new ImageIcon(appIcons.get(APPICON_32), "About");
+			JOptionPane.showMessageDialog(frame, "OOB Flag Generator (OSTBM) version " + VERSION + "\nMade by Leo",
+					"About OOB Flag Generator v" + VERSION, JOptionPane.INFORMATION_MESSAGE, aboutIcon);
 			break;
 		case A_UPDATE:
 			SwingUtilities.invokeLater(() -> {

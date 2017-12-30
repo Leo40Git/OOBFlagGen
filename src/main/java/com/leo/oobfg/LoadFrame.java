@@ -3,9 +3,11 @@ package com.leo.oobfg;
 import java.awt.Dimension;
 import java.awt.Font;
 
+import javax.swing.BorderFactory;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.SwingConstants;
+import javax.swing.border.BevelBorder;
 
 public class LoadFrame extends JFrame {
 
@@ -29,11 +31,12 @@ public class LoadFrame extends JFrame {
 		loadLabel.setFont(loadLabel.getFont().deriveFont(Font.BOLD, 20));
 		loadLabel.setHorizontalAlignment(SwingConstants.CENTER);
 		loadLabel.setVerticalAlignment(SwingConstants.CENTER);
+		loadLabel.setBorder(BorderFactory.createBevelBorder(BevelBorder.RAISED));
 		loadLabel.setOpaque(true);
 		add(loadLabel);
 		pack();
 		setLocationRelativeTo(null);
-		setIconImages(OOBFlagGen.icons);
+		setIconImages(OOBFlagGen.appIcons);
 		setVisible(true);
 		requestFocus();
 	}
