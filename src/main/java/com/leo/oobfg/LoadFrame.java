@@ -2,7 +2,6 @@ package com.leo.oobfg;
 
 import java.awt.Dimension;
 import java.awt.Font;
-import java.awt.Toolkit;
 
 import javax.swing.JFrame;
 import javax.swing.JLabel;
@@ -34,7 +33,7 @@ public class LoadFrame extends JFrame {
 		add(loadLabel);
 		pack();
 		setLocationRelativeTo(null);
-		setIconImage(Toolkit.getDefaultToolkit().getImage(OOBFlagGen.class.getResource("/com/leo/oobfg/icon.png")));
+		setIconImages(OOBFlagGen.icons);
 		setVisible(true);
 		requestFocus();
 	}

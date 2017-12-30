@@ -5,6 +5,7 @@ import java.awt.Desktop;
 import java.awt.Dimension;
 import java.awt.EventQueue;
 import java.awt.GraphicsEnvironment;
+import java.awt.Image;
 import java.awt.Toolkit;
 import java.awt.datatransfer.Clipboard;
 import java.awt.datatransfer.StringSelection;
@@ -22,6 +23,8 @@ import java.net.URL;
 import java.nio.channels.Channels;
 import java.nio.channels.ReadableByteChannel;
 import java.text.ParseException;
+import java.util.LinkedList;
+import java.util.List;
 
 import javax.swing.ButtonGroup;
 import javax.swing.JButton;
@@ -39,10 +42,21 @@ import javax.swing.UnsupportedLookAndFeelException;
 import javax.swing.text.MaskFormatter;
 
 public class OOBFlagGen implements ActionListener {
-	
+
+	public static List<Image> icons;
+
+	public static void initAppIcons() throws IOException {
+		icons = new LinkedList<>();
+		final String[] sizes = new String[] { "16", "32", "64" };
+		for (String size : sizes)
+			icons.add(Toolkit.getDefaultToolkit()
+					.getImage(OOBFlagGen.class.getResource("/com/leo/oobfg/icon" + size + ".png")));
+	}
+
 	public static final Version VERSION = new Version("1.0");
 	public static final String UPDATE_CHECK_SITE = "https://raw.githubusercontent.com/Leo40Git/OOBFlagGen/master/.version";
 	public static final String DOWNLOAD_SITE = "https://github.com/Leo40Git/OOBFlagGen/releases/";
+	public static final String ISSUES_SITE = "https://github.com/Leo40Git/OOBFlagGen/issues";
 
 	public static final String A_GENERATE = "generate";
 	public static final String A_COPY = "copy";
@@ -63,6 +77,15 @@ public class OOBFlagGen implements ActionListener {
 	private JRadioButton rdbtnWord;
 	private JRadioButton rdbtnDword;
 	private JButton btnUpdate;
+
+	public static void resourceError(Throwable e) {
+		System.err.println("Error while loading resources!");
+		e.printStackTrace();
+		JOptionPane.showMessageDialog(null,
+				"Could not load resources:" + e + "\nPlease report this error here:\n" + ISSUES_SITE,
+				"Could not load resources!", JOptionPane.ERROR_MESSAGE);
+		System.exit(1);
+	}
 
 	/**
 	 * Launch the application.
@@ -93,6 +116,11 @@ public class OOBFlagGen implements ActionListener {
 		if (skipucR) {
 			Config.setBoolean(Config.KEY_SKIP_UPDATE_CHECK, false);
 			skipucF = skipucR;
+		}
+		try {
+			initAppIcons();
+		} catch (IOException e1) {
+			resourceError(e1);
 		}
 		LoadFrame loadFrame;
 		if (skipucF) {
@@ -130,7 +158,7 @@ public class OOBFlagGen implements ActionListener {
 	 */
 	private void initialize() {
 		frame = new JFrame();
-		frame.setIconImage(Toolkit.getDefaultToolkit().getImage(OOBFlagGen.class.getResource("/com/leo/oobfg/icon.png")));
+		frame.setIconImages(icons);
 		frame.setResizable(false);
 		frame.setTitle("OOB Flag Generator v" + VERSION);
 		frame.setBounds(100, 100, 353, 334);
@@ -206,14 +234,14 @@ public class OOBFlagGen implements ActionListener {
 		rdbtnWord.addActionListener(this);
 		rdbtnWord.setBounds(241, 35, 83, 23);
 		frame.getContentPane().add(rdbtnWord);
-		
+
 		rdbtnDword = new JRadioButton("DWORD");
 		btnGSize.add(rdbtnDword);
 		rdbtnDword.setActionCommand(A_SIZE_DWORD);
 		rdbtnDword.addActionListener(this);
 		rdbtnDword.setBounds(241, 61, 109, 23);
 		frame.getContentPane().add(rdbtnDword);
-		
+
 		btnUpdate = new JButton("Check for Updates");
 		btnUpdate.setActionCommand(A_UPDATE);
 		btnUpdate.addActionListener(this);
@@ -333,7 +361,7 @@ public class OOBFlagGen implements ActionListener {
 			break;
 		}
 	}
-	
+
 	public static void downloadFile(String url, File dest) throws IOException {
 		URL site = new URL(url);
 		try (InputStream siteIn = site.openStream();
@@ -342,7 +370,7 @@ public class OOBFlagGen implements ActionListener {
 			out.getChannel().transferFrom(rbc, 0, Long.MAX_VALUE);
 		}
 	}
-	
+
 	public static boolean browseTo(String url) throws URISyntaxException, IOException {
 		URI dlSite = new URI(url);
 		if (Desktop.isDesktopSupported())
