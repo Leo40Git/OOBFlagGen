@@ -61,7 +61,7 @@ public class OOBFlagGen implements ActionListener {
 	public static final int APPICON_32 = 1;
 	public static final int APPICON_64 = 2;
 
-	public static final Version VERSION = new Version("1.1");
+	public static final Version VERSION = new Version("1.1.1");
 	public static final String UPDATE_CHECK_SITE = "https://raw.githubusercontent.com/Leo40Git/OOBFlagGen/master/.version";
 	public static final String DOWNLOAD_SITE = "https://github.com/Leo40Git/OOBFlagGen/releases/";
 	public static final String ISSUES_SITE = "https://github.com/Leo40Git/OOBFlagGen/issues";
@@ -392,7 +392,7 @@ public class OOBFlagGen implements ActionListener {
 		case A_ABOUT:
 			if (aboutIcon == null)
 				aboutIcon = new ImageIcon(appIcons.get(APPICON_32), "About");
-			JOptionPane.showMessageDialog(frame, "OOB Flag Generator (OSTBM) version " + VERSION + "\nMade by Leo",
+			JOptionPane.showMessageDialog(frame, "OOB Flag Generator (OOBFG) version " + VERSION + "\nMade by Leo",
 					"About OOB Flag Generator v" + VERSION, JOptionPane.INFORMATION_MESSAGE, aboutIcon);
 			break;
 		case A_UPDATE:

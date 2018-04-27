@@ -1,4 +1,6 @@
-1.1
+1.1.1
+Hotfix 1.1.1
+- Fix about window referring to app as OSTBM
 Version 1.1
 - Add tooltips
 - Remove "check for updates" button
